@@ -1,16 +1,24 @@
-# All the imports go here
+# aircanvas.py
 import cv2
 import numpy as np
 import mediapipe as mp
 from collections import deque
+import time
 
+ml = 150
+max_x, max_y = 250+ml, 50
+curr_tool = "select tool"
+time_init = True
+rad = 40
+var_inits = False
+thick = 4
+prevx, prevy = 0,0
 
 # Giving different arrays to handle colour points of different colour
 bpoints = [deque(maxlen=1024)]
 gpoints = [deque(maxlen=1024)]
 rpoints = [deque(maxlen=1024)]
 ypoints = [deque(maxlen=1024)]
-
 
 # These indexes will be used to mark the points in particular arrays of specific colour
 blue_index = 0
@@ -25,6 +33,7 @@ colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 255, 255)]
 colorIndex = 0
 
 # Here is code for Canvas setup
+paintWindow = np.zeros((471,636,3)) + 255
 paintWindow = np.zeros((471,636,3)) + 255
 paintWindow = cv2.rectangle(paintWindow, (40,1), (140,65), (0,0,0), 2)
 paintWindow = cv2.rectangle(paintWindow, (160,1), (255,65), (255,0,0), 2)
@@ -45,10 +54,35 @@ mpHands = mp.solutions.hands
 hands = mpHands.Hands(max_num_hands=1, min_detection_confidence=0.7)
 mpDraw = mp.solutions.drawing_utils
 
+# drawing tools
+tools = cv2.imread("tools.png")
+tools = tools.astype('uint8')
 
-# Initialize the webcam
+mask = np.ones((480, 640))*255
+mask = mask.astype('uint8')
+
+# Add the getTool function from virtualpaint.py
+def getTool(x):
+    if x < 50 + ml:
+        return "line"
+    elif x<100 + ml:
+        return "rectangle"
+    elif x < 150 + ml:
+        return"draw"
+    elif x<200 + ml:
+        return "circle"
+    else:
+        return "erase"
+
+# Add the index_raised function from virtualpaint.py
+def index_raised(yi, y9):
+    if (y9 - yi) > 40:
+        return True
+    return False
+
 cap = cv2.VideoCapture(0)
 ret = True
+# Modify the main loop
 while ret:
     # Read each frame from the webcam
     ret, frame = cap.read()
@@ -72,13 +106,66 @@ while ret:
     cv2.putText(frame, "YELLOW", (520, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
     #frame = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
-    # Get hand landmark prediction
     result = hands.process(framergb)
 
     # post process the result
     if result.multi_hand_landmarks:
         landmarks = []
         for handslms in result.multi_hand_landmarks:
+            mpDraw.draw_landmarks(frame, handslms, mpHands.HAND_CONNECTIONS)
+            x = int(handslms.landmark[8].x*640)
+            y = int(handslms.landmark[8].y*480)
+            # Add the tool selection code from virtualpaint.py
+            if x < max_x and y < max_y and x > ml:
+                if time_init:
+                    ctime = time.time()
+                    time_init = False
+                ptime = time.time()
+                cv2.circle(frame, (x, y), rad, (0,255,255), 2)
+                rad -= 1
+                if (ptime - ctime) > 0.8:
+                    curr_tool = getTool(x)
+                    print("your current tool set to : ", curr_tool)
+                    time_init = True
+                    rad = 40
+
+            # Add the tool usage code from virtualpaint.py
+            if curr_tool == "draw":
+                xi, yi = int(handslms.landmark[12].x*640), int(handslms.landmark[12].y*480)
+                y9  = int(handslms.landmark[9].y*480)
+                if index_raised(yi, y9):
+                    cv2.line(mask, (prevx, prevy), (x, y), 0, thick)
+                    prevx, prevy = x, y
+            elif curr_tool == "line":
+                xi, yi = int(handslms.landmark[12].x*640), int(handslms.landmark[12].y*480)
+                y9  = int(handslms.landmark[9].y*480)
+                if index_raised(yi, y9):
+                    if not(var_inits):
+                        xii, yii = x, y
+                        var_inits = True
+                    cv2.line(frame, (xii, yii), (x, y), (50,152,255), thick)
+            elif curr_tool == "rectangle":
+                xi, yi = int(handslms.landmark[12].x*640), int(handslms.landmark[12].y*480)
+                y9  = int(handslms.landmark[9].y*480)
+                if index_raised(yi, y9):
+                    if not(var_inits):
+                        xii, yii = x, y
+                        var_inits = True
+                    cv2.rectangle(frame, (xii, yii), (x, y), (0,255,255), thick)
+            elif curr_tool == "circle":
+                xi, yi = int(handslms.landmark[12].x*640), int(handslms.landmark[12].y*480)
+                y9  = int(handslms.landmark[9].y*480)
+                if index_raised(yi, y9):
+                    if not(var_inits):
+                        xii, yii = x, y
+                        var_inits = True
+                    cv2.circle(frame, (xii, yii), int(((xii-x)**2 + (yii-y)**2)**0.5), (255,255,0), thick)
+            elif curr_tool == "erase":
+                xi, yi = int(handslms.landmark[12].x*640), int(handslms.landmark[12].y*480)
+                y9  = int(handslms.landmark[9].y*480)
+                if index_raised(yi, y9):
+                    cv2.circle(frame, (x, y), 30, (0,0,0), -1)
+                    cv2.circle(mask, (x, y), 30, 255, -1)
             for lm in handslms.landmark:
                 # # print(id, lm)
                 # print(lm.x)
@@ -149,11 +236,7 @@ while ret:
 
     # Draw lines of all the colors on the canvas and frame
     points = [bpoints, gpoints, rpoints, ypoints]
-    # for j in range(len(points[0])):
-    #         for k in range(1, len(points[0][j])):
-    #             if points[0][j][k - 1] is None or points[0][j][k] is None:
-    #                 continue
-    #             cv2.line(paintWindow, points[0][j][k - 1], points[0][j][k], colors[0], 2)
+
     for i in range(len(points)):
         for j in range(len(points[i])):
             for k in range(1, len(points[i][j])):
@@ -161,9 +244,17 @@ while ret:
                     continue
                 cv2.line(frame, points[i][j][k - 1], points[i][j][k], colors[i], 2)
                 cv2.line(paintWindow, points[i][j][k - 1], points[i][j][k], colors[i], 2)
+    result = cv2.bitwise_and(frame, frame, mask=mask)
+    frame[:, :, 1] = result[:, :, 1]
+    frame[:, :, 2] = result[:, :, 2]
+    frame[:max_y, ml:max_x] = cv2.addWeighted(tools, 0.7, frame[:max_y, ml:max_x], 0.3, 0)
+    cv2.putText(frame, curr_tool, (270+ml,30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2)
+	
 
+    # ... rest of the aircanvas.py main loop code ...
     cv2.imshow("Output", frame) 
     cv2.imshow("Paint", paintWindow)
+    
 
     if cv2.waitKey(1) == ord('q'):
         break
