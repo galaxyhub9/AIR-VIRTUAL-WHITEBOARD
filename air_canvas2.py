@@ -1,4 +1,4 @@
-# All the imports go here
+# HALF ERASER IS IMPLEMENTED
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -28,13 +28,13 @@ cv2.rectangle(paintWindow, (160, 1), (255, 65), (255, 0, 0), 2)
 cv2.rectangle(paintWindow, (275, 1), (370, 65), (0, 255, 0), 2)
 cv2.rectangle(paintWindow, (390, 1), (485, 65), (0, 0, 255), 2)
 cv2.rectangle(paintWindow, (505, 1), (600, 65), (0, 255, 255), 2)
-cv2.rectangle(paintWindow, (605, 1), (750, 65), (0, 0, 0), 2)  # Eraser button
+cv2.rectangle(paintWindow, (620, 1), (750, 65), (0, 0, 0), 2)  # Eraser button
 cv2.putText(paintWindow, "CLEAR", (49, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
 cv2.putText(paintWindow, "BLUE", (185, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
 cv2.putText(paintWindow, "GREEN", (298, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
 cv2.putText(paintWindow, "RED", (420, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
 cv2.putText(paintWindow, "YELLOW", (520, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
-cv2.putText(paintWindow, "ERASER", (620, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+cv2.putText(paintWindow, "ERASER", (720, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
 cv2.namedWindow('Paint', cv2.WINDOW_AUTOSIZE)
 
 # Initialize mediapipe
@@ -44,7 +44,7 @@ mpDraw = mp.solutions.drawing_utils
 
 # Initialize the webcam
 cap = cv2.VideoCapture(0)
-h,w= 720,720
+h,w= 720,1100
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
 ret = True
@@ -59,13 +59,13 @@ while ret:
     cv2.rectangle(frame, (275, 1), (370, 65), (0, 255, 0), 2)
     cv2.rectangle(frame, (390, 1), (485, 65), (0, 0, 255), 2)
     cv2.rectangle(frame, (505, 1), (600, 65), (0, 255, 255), 2)
-    cv2.rectangle(frame, (605, 1), (750, 65), (0, 0, 0), 2)  # Eraser button
+    cv2.rectangle(frame, (620, 1), (720, 65), (0, 0, 0), 2)  # Eraser button
     cv2.putText(frame, "CLEAR", (49, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
     cv2.putText(frame, "BLUE", (185, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
     cv2.putText(frame, "GREEN", (298, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
     cv2.putText(frame, "RED", (420, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
     cv2.putText(frame, "YELLOW", (520, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
-    cv2.putText(frame, "ERASER", (620, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+    cv2.putText(frame, "ERASER", (640, 33), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
 
 
     # Get hand landmark prediction
@@ -127,22 +127,35 @@ while ret:
                 print("erase mode on ")
         else:
             if colorIndex == 0:
-                bpoints[blue_index].appendleft(center)
+                bpoints[blue_index].appendleft(fore_finger)
             elif colorIndex == 1:
-                gpoints[green_index].appendleft(center)
+                gpoints[green_index].appendleft(fore_finger)
             elif colorIndex == 2:
-                rpoints[red_index].appendleft(center)
+                rpoints[red_index].appendleft(fore_finger)
             elif colorIndex == 3:
-                ypoints[yellow_index].appendleft(center)
+                ypoints[yellow_index].appendleft(fore_finger)
             elif colorIndex == 4:
                 print("color index is 4-----------")
                 cv2.circle(frame, fore_finger,20,colors[4], -1)
                 # cv2.circle(paintWindow, fore_finger,50,colors[4], -1)
-                eraser_radius = 20  # The radius of the eraser
+                eraser_radius = 50  # The radius of the eraser
                 for points in [bpoints, gpoints, rpoints, ypoints]:
                     for i in range(len(points)):
-                        points[i] = deque([point for point in points[i] if np.linalg.norm(np.array(point) - np.array(fore_finger)) > eraser_radius], maxlen=512)
-    
+                        # Split the deque into multiple deques at the points that are under the eraser
+                        new_deques = []
+                        current_deque = deque(maxlen=512)
+                        for point in points[i]:
+                            print(f"point: {point}, fore_finger: {fore_finger}")
+
+                            if np.linalg.norm(np.array(point) - np.array(fore_finger)) <= eraser_radius:
+                                if current_deque:
+                                    new_deques.append(current_deque)
+                                    current_deque = deque(maxlen=512)
+                            else:
+                                current_deque.append(point)
+                        if current_deque:
+                            new_deques.append(current_deque)
+                        points[i] = deque(point for deque in new_deques for point in deque)
     
     points = [bpoints, gpoints, rpoints, ypoints]                                
     paintWindow.fill(255)  # Clear the paint window  
