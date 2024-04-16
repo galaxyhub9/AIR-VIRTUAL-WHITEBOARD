@@ -136,27 +136,14 @@ while ret:
             elif colorIndex == 3:
                 ypoints[yellow_index].appendleft(center)
             elif colorIndex == 4:
-                print("------------colorIndex-----\n",colorIndex)
-                # cv2.circle(frame, fore_finger,20,colors[4], -1)
-                # cv2.circle(paintWindow, fore_finger,20,colors[4], -1)
-                if len(bpoints[blue_index]) > 1:  # Make sure there are at least two points
-                    # print(bpoints)
-                    cv2.circle(frame, fore_finger,20,colors[4], -1)
-                    cv2.circle(paintWindow, fore_finger,20,colors[4], -1)
-                    print("---------bpoints",bpoints)
-                    print("---------bpoints_INDEX",bpoints[blue_index])
-                    for point in bpoints[blue_index]:
-                        print("^^^^^^^^^^^^^^point",point)
-                        print("^^^^^^^^^^^^^^center[0]",center[0])
-                        if center[0] == point[0]:
-                            print("##############-------center vs point",center[0],point[0] )
-                            print("!!!!!!!!!!! index[point]",bpoints[blue_index].index(point) )
-                            ind = bpoints[blue_index].index(point)
-                            bpoints[blue_index][ind] = (0,0)
-                            print("bpoints[blueindex]@@@@@@@@@",bpoints[blue_index])
-                    # cv2.line(frame,  fore_finger, bpoints[blue_index][-1],(255, 255, 255), 10)
-                    # cv2.line(paintWindow, fore_finger, bpoints[blue_index][-1], (255, 255, 255), 10)
-                # bpoints[blue_index].appendleft(fore_finger)  # Add the new point to the deque               
+                print("color index is 4-----------")
+                cv2.circle(frame, fore_finger,20,colors[4], -1)
+                # cv2.circle(paintWindow, fore_finger,50,colors[4], -1)
+                eraser_radius = 20  # The radius of the eraser
+                for points in [bpoints, gpoints, rpoints, ypoints]:
+                    for i in range(len(points)):
+                        points[i] = deque([point for point in points[i] if np.linalg.norm(np.array(point) - np.array(fore_finger)) > eraser_radius], maxlen=512)
+                                    
 
     # Draw lines based on selected color or erase
     points = [bpoints, gpoints, rpoints, ypoints]
