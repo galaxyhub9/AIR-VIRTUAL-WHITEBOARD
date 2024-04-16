@@ -135,6 +135,28 @@ while ret:
                 rpoints[red_index].appendleft(center)
             elif colorIndex == 3:
                 ypoints[yellow_index].appendleft(center)
+            elif colorIndex == 4:
+                print("------------colorIndex-----\n",colorIndex)
+                # cv2.circle(frame, fore_finger,20,colors[4], -1)
+                # cv2.circle(paintWindow, fore_finger,20,colors[4], -1)
+                if len(bpoints[blue_index]) > 1:  # Make sure there are at least two points
+                    # print(bpoints)
+                    cv2.circle(frame, fore_finger,20,colors[4], -1)
+                    cv2.circle(paintWindow, fore_finger,20,colors[4], -1)
+                    print("---------bpoints",bpoints)
+                    print("---------bpoints_INDEX",bpoints[blue_index])
+                    for point in bpoints[blue_index]:
+                        print("^^^^^^^^^^^^^^point",point)
+                        print("^^^^^^^^^^^^^^center[0]",center[0])
+                        if center[0] == point[0]:
+                            print("##############-------center vs point",center[0],point[0] )
+                            print("!!!!!!!!!!! index[point]",bpoints[blue_index].index(point) )
+                            ind = bpoints[blue_index].index(point)
+                            bpoints[blue_index][ind] = (0,0)
+                            print("bpoints[blueindex]@@@@@@@@@",bpoints[blue_index])
+                    # cv2.line(frame,  fore_finger, bpoints[blue_index][-1],(255, 255, 255), 10)
+                    # cv2.line(paintWindow, fore_finger, bpoints[blue_index][-1], (255, 255, 255), 10)
+                # bpoints[blue_index].appendleft(fore_finger)  # Add the new point to the deque               
 
     # Draw lines based on selected color or erase
     points = [bpoints, gpoints, rpoints, ypoints]
@@ -143,10 +165,10 @@ while ret:
             for k in range(1, len(points[i][j])):
                 if points[i][j][k - 1] is None or points[i][j][k] is None:
                     continue
-                if i == 4:  # Eraser mode
-                    print("erasing....")
-                    cv2.line(frame, points[i][j][k - 1], points[i][j][k], colors[i], 20)  # Erase with larger thickness
-                    cv2.line(paintWindow, points[i][j][k - 1], points[i][j][k], colors[i], 20)
+                # if i == 4:  # Eraser mode
+                #     print("erasing....")
+                #     cv2.line(frame, points[i][j][k - 1], points[i][j][k], colors[4], 20)  # Erase with larger thickness
+                #     cv2.line(paintWindow, points[i][j][k - 1], points[i][j][k], colors[4], 20)
                 else:
                     cv2.line(frame, points[i][j][k - 1], points[i][j][k], colors[i], 2)
                     cv2.line(paintWindow, points[i][j][k - 1], points[i][j][k], colors[i], 2)
