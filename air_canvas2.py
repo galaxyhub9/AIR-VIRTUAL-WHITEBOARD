@@ -152,6 +152,7 @@ while ret:
             for k in range(1, len(points[i][j])):
                 if points[i][j][k - 1] is None or points[i][j][k] is None:
                     continue
+                
                 # if i == 4:  # Eraser mode
                 #     print("erasing....")
                 #     cv2.line(frame, points[i][j][k - 1], points[i][j][k], colors[4], 20)  # Erase with larger thickness
