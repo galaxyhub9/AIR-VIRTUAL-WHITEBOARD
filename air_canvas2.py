@@ -51,7 +51,6 @@ ret = True
 while ret:
     # Read each frame from the webcam
     ret, frame = cap.read()
-
     # Flip the frame vertically
     frame = cv2.flip(frame, 1)
     framergb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -143,20 +142,16 @@ while ret:
                 for points in [bpoints, gpoints, rpoints, ypoints]:
                     for i in range(len(points)):
                         points[i] = deque([point for point in points[i] if np.linalg.norm(np.array(point) - np.array(fore_finger)) > eraser_radius], maxlen=512)
-                                    
-
-    # Draw lines based on selected color or erase
+    
+    
+    points = [bpoints, gpoints, rpoints, ypoints]                                
+    paintWindow.fill(255)  # Clear the paint window  
     points = [bpoints, gpoints, rpoints, ypoints]
     for i in range(len(points)):
         for j in range(len(points[i])):
             for k in range(1, len(points[i][j])):
                 if points[i][j][k - 1] is None or points[i][j][k] is None:
-                    continue
-                
-                # if i == 4:  # Eraser mode
-                #     print("erasing....")
-                #     cv2.line(frame, points[i][j][k - 1], points[i][j][k], colors[4], 20)  # Erase with larger thickness
-                #     cv2.line(paintWindow, points[i][j][k - 1], points[i][j][k], colors[4], 20)
+                    continue                
                 else:
                     cv2.line(frame, points[i][j][k - 1], points[i][j][k], colors[i], 2)
                     cv2.line(paintWindow, points[i][j][k - 1], points[i][j][k], colors[i], 2)
