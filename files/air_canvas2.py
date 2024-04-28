@@ -22,7 +22,7 @@ colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 255, 255), (255, 255, 255)]
 colorIndex = 0
 
 # Here is code for Canvas setup
-paintWindow = np.zeros((720, 800,3)) + 255
+paintWindow = np.zeros((720, 1100,3)) + 255
 cv2.rectangle(paintWindow, (40, 1), (140, 65), (0, 0, 0), 2)
 cv2.rectangle(paintWindow, (160, 1), (255, 65), (255, 0, 0), 2)
 cv2.rectangle(paintWindow, (275, 1), (370, 65), (0, 255, 0), 2)
@@ -42,9 +42,23 @@ mpHands = mp.solutions.hands
 hands = mpHands.Hands(max_num_hands=1, min_detection_confidence=0.7)
 mpDraw = mp.solutions.drawing_utils
 
+
+brush_thickness = 2
+
+
+
 # Initialize the webcam
 cap = cv2.VideoCapture(0)
 h,w= 720,1100
+thickness_region = (0, h // 3, 100, 2 * h // 3)
+
+# Thickness options
+thickness_options = [2, 5, 10]
+selected_thickness = thickness_options[0] 
+
+thickness_points = {thickness: [] for thickness in thickness_options}
+
+
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
 ret = True
@@ -91,6 +105,7 @@ while ret:
         # Handle color selection and drawing
         if thumb[1] - center[1] < 30:
             # Add new deques for drawing points
+
             bpoints.append(deque(maxlen=512))
             blue_index += 1
             gpoints.append(deque(maxlen=512))
@@ -99,6 +114,10 @@ while ret:
             red_index += 1
             ypoints.append(deque(maxlen=512))
             yellow_index += 1
+            
+        elif thickness_region[0] <= center[0] <= thickness_region[2]:
+            selected_thickness = int(np.interp(center[1], (thickness_region[1], thickness_region[3]), (1, 10)))
+       
         elif center[1] <= 65:
             if 40 <= center[0] <= 140:  # Clear Button
                 bpoints = [deque(maxlen=512)]
@@ -125,7 +144,13 @@ while ret:
             elif 605 <= center[0] <= 750:
                 colorIndex = 4  # Eraser
                 print("erase mode on ")
-        else:
+
+            
+        else:            
+            
+            brush_thickness = int(np.interp(center[1], (65, h), (1, 10)))
+                        
+            
             if colorIndex == 0:
                 bpoints[blue_index].appendleft(fore_finger)
             elif colorIndex == 1:
@@ -156,8 +181,24 @@ while ret:
                         if current_deque:
                             new_deques.append(current_deque)
                         points[i] = deque(point for deque in new_deques for point in deque)
-    
-    points = [bpoints, gpoints, rpoints, ypoints]                                
+       
+        # Store points for the selected thickness
+        if selected_thickness in thickness_points:
+            thickness_points[selected_thickness].append(fore_finger)         
+
+    # Draw lines on canvas for the selected thickness
+    for point in thickness_points[selected_thickness]:
+        cv2.circle(frame, point, brush_thickness, colors[colorIndex], -1)
+        cv2.circle(paintWindow, point, brush_thickness, colors[colorIndex], -1)
+
+    for idx, thickness in enumerate(thickness_options):
+        y_pos = int(np.interp(thickness, (1, 10), (thickness_region[1], thickness_region[3])))
+        cv2.putText(frame, str(thickness), (10, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2, cv2.LINE_AA)
+        if thickness == selected_thickness:
+            cv2.rectangle(frame, (0, y_pos - 15), (100, y_pos + 15), (0, 0, 0), -1)
+        
+       
+            
     paintWindow.fill(255)  # Clear the paint window  
     points = [bpoints, gpoints, rpoints, ypoints]
     for i in range(len(points)):
@@ -166,9 +207,12 @@ while ret:
                 if points[i][j][k - 1] is None or points[i][j][k] is None:
                     continue                
                 else:
-                    cv2.line(frame, points[i][j][k - 1], points[i][j][k], colors[i], 2)
-                    cv2.line(paintWindow, points[i][j][k - 1], points[i][j][k], colors[i], 2)
+                    cv2.line(frame, points[i][j][k - 1], points[i][j][k], colors[i], brush_thickness)
+                    cv2.line(paintWindow, points[i][j][k - 1], points[i][j][k], colors[i], brush_thickness)
+    
+ 
 
+    
     # Display the frame and paint window
     cv2.imshow("Output", frame)
     cv2.imshow("Paint", paintWindow)
