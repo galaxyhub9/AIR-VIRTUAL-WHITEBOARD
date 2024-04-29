@@ -47,17 +47,23 @@ mpDraw = mp.solutions.drawing_utils
 # Initialize the webcam
 cap = cv2.VideoCapture(0)
 h,w= 720,1100
-
-
-brush_thickness = 2
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+
+
+selected_thickness = 2  # Default selected pen size
+brush_thickness = 2
+
+
+
+
 ret = True
 while ret:
     # Read each frame from the webcam
     ret, frame = cap.read()
     # Flip the frame vertically
     frame = cv2.flip(frame, 1)
+
     framergb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     cv2.rectangle(frame, (40, 1), (140, 65), (0, 0, 0), 2)
     cv2.rectangle(frame, (160, 1), (255, 65), (255, 0, 0), 2)
@@ -86,6 +92,7 @@ while ret:
     # Post process the result
     if result.multi_hand_landmarks:
         landmarks = []
+        
         for handslms in result.multi_hand_landmarks:
             for lm in handslms.landmark:
                 lmx = int(lm.x * frame.shape[1])
@@ -125,6 +132,7 @@ while ret:
        
         elif center[1] <= 65:
             if 40 <= center[0] <= 140:  # Clear Button
+                # clear_canvas = True
                 bpoints = [deque(maxlen=512)]
                 gpoints = [deque(maxlen=512)]
                 rpoints = [deque(maxlen=512)]
@@ -134,6 +142,9 @@ while ret:
                 red_index = 0
                 yellow_index = 0
                 paintWindow[67:, :, :] = 255
+                
+        
+                
             elif 160 <= center[0] <= 255:
                 print("blue mode on ")
                 colorIndex = 0  # Blue
@@ -154,13 +165,21 @@ while ret:
         else:      
                
             if colorIndex == 0:
-                bpoints[blue_index].appendleft(fore_finger)
+                if bpoints[blue_index]:
+                    cv2.line(frame, bpoints[blue_index][0][0], fore_finger, colors[0], brush_thickness)
+                bpoints[blue_index].appendleft((fore_finger, brush_thickness))
             elif colorIndex == 1:
-                gpoints[green_index].appendleft(fore_finger)
+                if gpoints[green_index]:
+                    cv2.line(frame, gpoints[green_index][0][0], fore_finger, colors[1], brush_thickness)
+                gpoints[green_index].appendleft((fore_finger, brush_thickness))
             elif colorIndex == 2:
-                rpoints[red_index].appendleft(fore_finger)
+                if rpoints[red_index]:
+                    cv2.line(frame, rpoints[red_index][0][0], fore_finger, colors[2], brush_thickness)
+                rpoints[red_index].appendleft((fore_finger, brush_thickness))
             elif colorIndex == 3:
-                ypoints[yellow_index].appendleft(fore_finger)
+                if ypoints[yellow_index]:
+                    cv2.line(frame, ypoints[yellow_index][0][0], fore_finger, colors[3], brush_thickness)
+                ypoints[yellow_index].appendleft((fore_finger, brush_thickness))
             elif colorIndex == 4:
                 print("color index is 4-----------")
                 cv2.circle(frame, fore_finger,20,colors[4], -1)
@@ -183,28 +202,25 @@ while ret:
                         if current_deque:
                             new_deques.append(current_deque)
                         points[i] = deque(point for deque in new_deques for point in deque)
-       
-        # # Store points for the selected thickness
-        # if selected_thickness in thickness_points:
-        #     thickness_points[selected_thickness].append(fore_finger)         
+        # frame = cv2.add(frame, canvas)   
 
-
-       
-            
     paintWindow.fill(255)  # Clear the paint window  
     points = [bpoints, gpoints, rpoints, ypoints]
-    for i in range(len(points)):
-        for j in range(len(points[i])):
-            for k in range(1, len(points[i][j])):
-                if points[i][j][k - 1] is None or points[i][j][k] is None:
-                    continue                
-                else:
-                    cv2.line(frame, points[i][j][k - 1], points[i][j][k], colors[i], brush_thickness)
-                    cv2.line(paintWindow, points[i][j][k - 1], points[i][j][k], colors[i], brush_thickness)
+    # for i in range(len(points)):
+    #     for j in range(len(points[i])):
+    #         for k in range(1, len(points[i][j])):
+    #             if points[i][j][k - 1] is None or points[i][j][k] is None:
+    #                 continue                
+    #             else:
+    #                 cv2.line(frame, points[i][j][k - 1], points[i][j][k], colors[i], brush_thickness)
+    #                 cv2.line(paintWindow, points[i][j][k - 1], points[i][j][k], colors[i], brush_thickness)
 
  
-
-    
+    for i in range(len(bpoints[blue_index])-1):
+        if bpoints[blue_index][i] is None or bpoints[blue_index][i+1] is None:
+            continue
+        cv2.line(frame, bpoints[blue_index][i][0], bpoints[blue_index][i+1][0], colors[0], bpoints[blue_index][i][1])  
+        cv2.line(paintWindow, bpoints[blue_index][i][0], bpoints[blue_index][i+1][0], colors[0], bpoints[blue_index][i][1])  
     # Display the frame and paint window
     cv2.imshow("Output", frame)
     cv2.imshow("Paint", paintWindow)
